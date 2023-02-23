@@ -1,5 +1,4 @@
 0x09. Web infrastructure design
-
 Concepts
 DNS
 
@@ -115,3 +114,8 @@ This protects each server from unwanted and unauthorized users rather than prote
 Issues With This Infrastructure
 High maintenance costs.
 Moving each of the major components to its own server, means that more servers would have to be bought and the company's electricity bill would rise along with the introduction of new servers. Some of the company's funds would have to be used to buy the servers and pay for the electricity consumption needed to keep the servers (including the new and old ones) running.
+
+
+Author
+
+Ako Atem Sampson
