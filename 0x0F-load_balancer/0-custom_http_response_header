@@ -1,31 +1,84 @@
 #!/usr/bin/env bash
-# Configure Nginx so that its HTTP response contains a custom header (on web-01 and web-02)
-# The name of the custom HTTP header must be X-Served-By
-# The value of the custom HTTP header must be the hostname of the server Nginx is running on
-sudo apt-get update
-sudo apt-get -y install nginx
+# duplicate web-01 to web-02
+# these scripts are an upgrade from the web-server scripts...
 
-# configure firewall to allow request through port 80
+# uncomment to see the script run in action
+#set -x
+
+echo -e "Updating and doing some minor checks...\n"
+
+function install() {
+	command -v "$1" &> /dev/null
+
+	#shellcheck disable=SC2181
+	if [ $? -ne 0 ]; then
+		echo -e "	Installing: $1$\n"
+		sudo apt-get update -y -qq && \
+			sudo apt-get install -y "$1" -qq
+		echo -e "\n"
+	else
+		echo -e "	${1} is already installed.\n"
+	fi
+}
+
+install nginx #install nginx
+
+echo -e "\nSetting up some minor stuff.\n"
+
+# allowing nginx on firewall
 sudo ufw allow 'Nginx HTTP'
 
-sudo mkdir -p /var/www/html
+# Give the user ownership to website files for easy editing
+if [ -d "/var/www" ]; then
+	sudo chown -R "$USER":"$USER" /var/www
+	sudo chmod -R 755 /var/www
+else
+	sudo mkdir -p /var/www
+	sudo chown -R "$USER":"$USER" /var/www
+	sudo chmod -R 755 /var/www
+fi
 
-# change permissions to allow us to easily create files in this directory
-sudo chmod -R 755 /var/www
+# create directories if not present
+for dir in /var/www/{html,error}; do
+	if ! [ -d "$dir" ]; then
+		mkdir -p "$dir"
+	fi
+done
 
-#  create the index page
-echo 'Hello World!' |sudo tee  /var/www/html/index.html
+# creating new index
+echo "Hello World!" > /var/www/html/index.html
 
-# create a webpage for error 404
-echo "This page is not available" |sudo tee /var/www/html/404.html
+# create new error page
+echo "Ceci n'est pas une page" > /var/www/html/error_404.html
 
-# code to configure redirect for a single page(/redirect_me) and add header to display hostname
-string_for_replacement="server_name _;\n\tadd_header X-Served-By \$hostname;\n\trewrite ^\/redirect_me https:\/\/www.akoatem permanent;"
-sudo sed -i "s/server_name _;/$string_for_replacement/" /etc/nginx/sites-enabled/default
+# backup default server config file
+sudo cp /etc/nginx/sites-enabled/default nginx-sites-enabled_default.backup
 
-# code to configure redirect for 404 error page
-string_for_replacement="listen 80 default_server;\n\terror_page 404 \/404.html;\n\tlocation = \/404.html {\n\t\troot \/var\/www\/html;\n\t\tinternal;\n\t}"
-sudo sed -i "s/listen 80 default_server;/$string_for_replacement/" /etc/nginx/sites-enabled/default
+server_config=\
+"server {
+		listen 80 default_server;
+		listen [::]:80 default_server;
+		root /var/www/html;
+		index index.html index.htm index.nginx-debian.html
+		server_name_;
+		add_header X-Served-By \$hostname;
+		location / {
+			try_files \$uri \$uri/ =404;
+		}
+		if (\$request_filename ~ redirect_me){
+			rewrite ^ https://th3-gr00t.tk/ permanent;
+		}
+		error_page 404 /error_404.html;
+		location = /error_404.html {
+			internal;
+		}
+}"
 
-# restart the web server after updating the settings
-sudo service nginx restart
+#shellcheck disable=SC2154
+echo "$server_config" | sudo dd status=none of=/etc/nginx/sites-enabled/default
+
+if [ "$(pgrep -c nginx)" -le 0 ]; then
+	sudo service nginx start
+else
+	sudo service nginx restart
+fi
