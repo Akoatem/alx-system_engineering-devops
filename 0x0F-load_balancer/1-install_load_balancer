@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-sudo apt-get update
-sudo apt-get install haproxy
+sudo apt-get -y update
+apt-get -y install haproxy
 
 # edit config file
 server_config=\
@@ -12,8 +12,8 @@ frontend  akoatem-frontend
         default_backend akoatem-backend
 backend akoatem-backend
         balance roundrobin
-        server 106489-web-01 100.26.224.213:80 check
-        server 106489-web-02 100.25.131.8:80 check
+        server 106489-web-01 34.232.68.152:80 check
+        server 106489-web-02 3.83.227.80:80 check
 "
 echo "$server_config" | sudo tee -a /etc/haproxy/haproxy.cfg
 
