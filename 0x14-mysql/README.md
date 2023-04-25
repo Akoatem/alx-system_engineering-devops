@@ -179,7 +179,7 @@ mysql> CREATE DATABASE db_name;
 mysql>exit
 bye
 
-$ mysql -uroot p db_name < export_db_name.sql
+$ mysql -uroot -p db_name < export_db_name.sql
 password:
 
 # Now edit the config file in /etc/mysql/mysql.conf.d/mysqld.cnf and then reload mysql-server
